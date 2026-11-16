@@ -1,0 +1,774 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Distributed Rate Limiter",
+    "version": "1.0.0",
+    "description": "Identity from JWT sub, tenant_id, api_key_id, tier; socket IP only. Signed issuer/audience checked. Bodies <=8192B. No cross-tenant impersonation. Evaluation HTTP deadline 2s at ingress; Redis command 50ms, connect 500ms, no automatic consumption retry. All responses should be treated as noncacheable."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Local demo only; use TLS in production"
+    }
+  ],
+  "paths": {
+    "/api/v1/rate-limits/evaluate": {
+      "post": {
+        "summary": "Consume quota using signed JWT identity",
+        "description": "Required scope: limiter.evaluate",
+        "security": [
+          {
+            "bearer": [ ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Decision"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing or invalid JWT"
+          },
+          "403": {
+            "description": "Required scope missing"
+          },
+          "503": {
+            "description": "Unavailable; consumption outcome may be unknown; do not blindly retry",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rejected without token deduction",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds rounded up; absent for cost exceeding capacity",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Mode": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Decision"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Evaluation"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/rate-limits/effective": {
+      "get": {
+        "summary": "Resolve applicable policies for your signed identity",
+        "description": "Required scope: limiter.evaluate",
+        "security": [
+          {
+            "bearer": [ ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Policy"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing or invalid JWT"
+          },
+          "403": {
+            "description": "Required scope missing"
+          },
+          "503": {
+            "description": "Unavailable; consumption outcome may be unknown; do not blindly retry",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "endpoint",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^/[a-zA-Z0-9/_-]{1,127}$"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/rate-limits/status": {
+      "get": {
+        "summary": "Non-consuming projection of distributed balance; excludes unused local leases",
+        "description": "Required scope: limiter.evaluate",
+        "security": [
+          {
+            "bearer": [ ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Decision"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing or invalid JWT"
+          },
+          "403": {
+            "description": "Required scope missing"
+          },
+          "503": {
+            "description": "Unavailable; consumption outcome may be unknown; do not blindly retry",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "endpoint",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^/[a-zA-Z0-9/_-]{1,127}$"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/policies": {
+      "get": {
+        "summary": "Read current durable snapshot",
+        "description": "Required scope: limiter.admin",
+        "security": [
+          {
+            "bearer": [ ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Snapshot"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing or invalid JWT"
+          },
+          "403": {
+            "description": "Required scope missing"
+          },
+          "503": {
+            "description": "Unavailable; consumption outcome may be unknown; do not blindly retry",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create policy; existing ID conflicts",
+        "description": "Required scope: limiter.admin",
+        "security": [
+          {
+            "bearer": [ ]
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing or invalid JWT"
+          },
+          "403": {
+            "description": "Required scope missing"
+          },
+          "503": {
+            "description": "Unavailable; consumption outcome may be unknown; do not blindly retry",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Policy"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Version conflict; reread policy and audit history after ambiguous response"
+          },
+          "413": {
+            "description": "JSON payload exceeds 8192 bytes"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Policy"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/policies/{id}": {
+      "put": {
+        "summary": "Replace policy if current version matches",
+        "description": "Required scope: limiter.admin",
+        "security": [
+          {
+            "bearer": [ ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Policy"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing or invalid JWT"
+          },
+          "403": {
+            "description": "Required scope missing"
+          },
+          "503": {
+            "description": "Unavailable; consumption outcome may be unknown; do not blindly retry",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Version conflict; reread policy and audit history after ambiguous response"
+          },
+          "413": {
+            "description": "JSON payload exceeds 8192 bytes"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Policy"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 64
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "Bare integer policy version, as returned in Policy.version (application-specific optimistic concurrency contract).",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ]
+      },
+      "delete": {
+        "summary": "Disable policy; retain tombstone/history",
+        "description": "Required scope: limiter.admin",
+        "security": [
+          {
+            "bearer": [ ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Policy"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing or invalid JWT"
+          },
+          "403": {
+            "description": "Required scope missing"
+          },
+          "503": {
+            "description": "Unavailable; consumption outcome may be unknown; do not blindly retry",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Version conflict; reread policy and audit history after ambiguous response"
+          },
+          "413": {
+            "description": "JSON payload exceeds 8192 bytes"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 64
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "Bare integer policy version, as returned in Policy.version (application-specific optimistic concurrency contract).",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/policies/{id}/versions": {
+      "get": {
+        "summary": "Read up to 100 most recent versions",
+        "description": "Required scope: limiter.admin",
+        "security": [
+          {
+            "bearer": [ ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Policy"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing or invalid JWT"
+          },
+          "403": {
+            "description": "Required scope missing"
+          },
+          "503": {
+            "description": "Unavailable; consumption outcome may be unknown; do not blindly retry",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
+        ]
+      }
+    },
+    "/protected/demo": {
+      "get": {
+        "summary": "Native filter demonstration: cost one, canonical route",
+        "description": "Required scope: authenticated",
+        "security": [
+          {
+            "bearer": [ ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing or invalid JWT"
+          },
+          "403": {
+            "description": "Required scope missing"
+          },
+          "503": {
+            "description": "Unavailable; consumption outcome may be unknown; do not blindly retry",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rejected without token deduction",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds rounded up; absent for cost exceeding capacity",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Mode": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Decision"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Policy": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "ruleName",
+          "dimension",
+          "tenant",
+          "tier",
+          "endpoint",
+          "capacity",
+          "refillPerSecond",
+          "failureMode",
+          "lease",
+          "enabled",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]{1,64}$"
+          },
+          "ruleName": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]{1,64}$"
+          },
+          "dimension": {
+            "type": "string",
+            "enum": [
+              "GLOBAL",
+              "TENANT",
+              "USER",
+              "IP",
+              "API_KEY",
+              "ENDPOINT"
+            ]
+          },
+          "tenant": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Exact tenant claim or *"
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "*",
+              "FREE",
+              "STANDARD",
+              "PREMIUM",
+              "ENTERPRISE"
+            ]
+          },
+          "endpoint": {
+            "type": "string",
+            "maxLength": 128,
+            "description": "Exact canonical route or *"
+          },
+          "capacity": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "maximum": 1000000000
+          },
+          "refillPerSecond": {
+            "type": "number",
+            "minimum": 0.001,
+            "maximum": 1000000000,
+            "description": "capacity/rate must be <=86400 seconds"
+          },
+          "failureMode": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "CLOSED"
+            ]
+          },
+          "lease": {
+            "type": "boolean",
+            "default": false
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
+      "Evaluation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "endpoint",
+          "cost"
+        ],
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "maxLength": 128,
+            "pattern": "^/[a-zA-Z0-9/_-]{1,127}$"
+          },
+          "cost": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000
+          }
+        }
+      },
+      "Decision": {
+        "type": "object",
+        "required": [
+          "allowed",
+          "remainingTokens",
+          "retryAfterMs",
+          "policyIds",
+          "mode"
+        ],
+        "properties": {
+          "allowed": {
+            "type": "boolean"
+          },
+          "remainingTokens": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "retryAfterMs": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "policyIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "mode": {
+            "type": "string"
+          }
+        }
+      },
+      "Snapshot": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "policies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Policy"
+            }
+          },
+          "loadedNanos": {
+            "type": "integer",
+            "description": "Process-local monotonic diagnostic; not a portable timestamp"
+          }
+        }
+      },
+      "Problem": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "integer"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

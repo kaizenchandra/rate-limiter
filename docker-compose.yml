@@ -1,0 +1,58 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: limiter
+      POSTGRES_USER: limiter
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?Set DATABASE_PASSWORD in .env}
+    ports: [ "127.0.0.1:5432:5432" ]
+    volumes: [ "postgres-data:/var/lib/postgresql/data" ]
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U limiter" ]
+      interval: 5s
+      timeout: 2s
+      retries: 20
+  redis:
+    image: redis:8.2.11-alpine
+    command: [ "redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction", "--appendonly", "yes" ]
+    ports: [ "127.0.0.1:6379:6379" ]
+    volumes: [ "redis-data:/data" ]
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 2s
+      retries: 20
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4.0
+    command: [ "start-dev", "--import-realm" ]
+    environment:
+      KC_HOSTNAME: http://localhost:9000
+      KC_HEALTH_ENABLED: "true"
+    ports: [ "127.0.0.1:9000:8080" ]
+    volumes:
+      - "./docker/keycloak/realm.json:/opt/keycloak/data/import/rate-limiter-realm.json:ro"
+      - "keycloak-data:/opt/keycloak/data"
+    healthcheck:
+      test: [ "CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/9000; printf \"GET /health/ready HTTP/1.0\r\n\r\n\" >&3; head -1 <&3 | grep -q 200'" ]
+      interval: 5s
+      timeout: 3s
+      start_period: 60s
+      retries: 30
+  app:
+    build: .
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/limiter
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?Set DATABASE_PASSWORD in .env}
+      REDIS_HOST: redis
+      JWT_ISSUER: http://localhost:9000/realms/rate-limiter
+      JWT_JWK_SET_URI: http://keycloak:8080/realms/rate-limiter/protocol/openid-connect/certs
+      MANAGEMENT_OTLP_TRACING_EXPORT_ENABLED: "false"
+    ports: [ "127.0.0.1:8080:8080" ]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      keycloak: { condition: service_healthy }
+volumes:
+  postgres-data:
+  redis-data:
+  keycloak-data:

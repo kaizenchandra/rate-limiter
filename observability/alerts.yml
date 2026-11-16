@@ -1,0 +1,23 @@
+groups:
+  - name: limiter
+    rules:
+      - alert: LimiterRedisErrors
+        expr: sum(rate(limiter_redis_failures_total[5m])) > 1
+        for: 2m
+        labels: { severity: page }
+        annotations: { summary: "Rate limiter dependency failures; inspect unknown outcomes and fallback" }
+      - alert: LimiterDecisionP99
+        expr: histogram_quantile(0.99, sum by(le) (rate(limiter_decision_latency_seconds_bucket[5m]))) > 0.005
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "Regional decision p99 exceeds the 5ms target" }
+      - alert: LimiterFailOpen
+        expr: sum(rate(limiter_fallback_total{mode="open"}[1m])) > 0
+        for: 1m
+        labels: { severity: page }
+        annotations: { summary: "Fail-open admission active; quota guarantee suspended" }
+      - alert: LimiterPolicyPropagationFailures
+        expr: sum(rate(limiter_policy_propagation_failures_total[1m])) > 0
+        for: 2m
+        labels: { severity: warning }
+        annotations: { summary: "Policy refresh failing; stale snapshot will become unavailable" }

@@ -1,0 +1,4 @@
+mode,requests,allowed,elapsed_ms,ops_per_second,p50_us,p95_us,p99_us
+local-only-java,10000,10000,0.841,11897099.6,0.042,0.084,0.250
+direct-redis,10000,10000,1524.221,6560.7,154.417,220.625,319.000
+prepaid-lease,10000,10000,111.770,89469.4,1.042,150.625,171.042

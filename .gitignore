@@ -1,0 +1,5 @@
+target/
+.env
+*.log
+benchmarks/results/tokens*.json
+__pycache__/

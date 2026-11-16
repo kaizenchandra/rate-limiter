@@ -1,0 +1,75 @@
+server:
+  port: 8080
+  shutdown: graceful
+  forward-headers-strategy: none
+  tomcat:
+    threads:
+      max: 128
+      min-spare: 8
+    max-connections: 2048
+    accept-count: 128
+    connection-timeout: 2s
+    max-http-form-post-size: 8KB
+  max-http-request-header-size: 16KB
+spring:
+  application:
+    name: distributed-rate-limiter
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/limiter}
+    username: ${DATABASE_USER:limiter}
+    password: ${DATABASE_PASSWORD}
+    hikari:
+      maximum-pool-size: 4
+      connection-timeout: 1000
+      validation-timeout: 1000
+      data-source-properties:
+        connectTimeout: 2
+        socketTimeout: 2
+        tcpKeepAlive: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 50ms
+      connect-timeout: 500ms
+      ssl:
+        enabled: ${REDIS_TLS:false}
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+limiter:
+  domain: ${COORDINATION_DOMAIN:region-a}
+  leasing: ${LEASING:false}
+  issuer: ${JWT_ISSUER:http://localhost:9000/realms/rate-limiter}
+  jwk-set-uri: ${JWT_JWK_SET_URI:http://localhost:9000/realms/rate-limiter/protocol/openid-connect/certs}
+  audience: ${JWT_AUDIENCE:rate-limiter}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,db,redis,policy
+  tracing:
+    sampling:
+      probability: 0.01
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
+  metrics:
+    distribution:
+      percentiles-histogram:
+        limiter.decision.latency: true
+        limiter.redis.latency: true
+logging:
+  structured:
+    format:
+      console: logstash

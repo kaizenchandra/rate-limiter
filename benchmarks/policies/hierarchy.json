@@ -1,0 +1,72 @@
+[
+  {
+    "id": "benchmark-global",
+    "ruleName": "benchmark-global",
+    "dimension": "GLOBAL",
+    "tenant": "*",
+    "tier": "*",
+    "endpoint": "/benchmark",
+    "capacity": 1000000000,
+    "refillPerSecond": 1000000000,
+    "failureMode": "CLOSED",
+    "lease": false,
+    "enabled": true,
+    "version": 0
+  },
+  {
+    "id": "benchmark-tenant",
+    "ruleName": "benchmark-tenant",
+    "dimension": "TENANT",
+    "tenant": "*",
+    "tier": "*",
+    "endpoint": "/benchmark",
+    "capacity": 1000000000,
+    "refillPerSecond": 1000000000,
+    "failureMode": "CLOSED",
+    "lease": false,
+    "enabled": true,
+    "version": 0
+  },
+  {
+    "id": "benchmark-user",
+    "ruleName": "benchmark-user",
+    "dimension": "USER",
+    "tenant": "*",
+    "tier": "*",
+    "endpoint": "/benchmark",
+    "capacity": 1000000000,
+    "refillPerSecond": 1000000000,
+    "failureMode": "CLOSED",
+    "lease": false,
+    "enabled": true,
+    "version": 0
+  },
+  {
+    "id": "benchmark-api_key",
+    "ruleName": "benchmark-api_key",
+    "dimension": "API_KEY",
+    "tenant": "*",
+    "tier": "*",
+    "endpoint": "/benchmark",
+    "capacity": 1000000000,
+    "refillPerSecond": 1000000000,
+    "failureMode": "CLOSED",
+    "lease": false,
+    "enabled": true,
+    "version": 0
+  },
+  {
+    "id": "benchmark-endpoint",
+    "ruleName": "benchmark-endpoint",
+    "dimension": "ENDPOINT",
+    "tenant": "*",
+    "tier": "*",
+    "endpoint": "/benchmark",
+    "capacity": 1000000000,
+    "refillPerSecond": 1000000000,
+    "failureMode": "CLOSED",
+    "lease": false,
+    "enabled": true,
+    "version": 0
+  }
+]

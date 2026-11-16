@@ -1,0 +1,19 @@
+mvn -o -B -ntp -Pintegration verify; JAVA_HOME=Oracle JDK21
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.492 s -- in com.example.ratelimiter.FailureHandlingTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.023 s -- in com.example.ratelimiter.security.JwtValidationTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.097 s -- in com.example.ratelimiter.PolicyResolverTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.214 s -- in com.example.ratelimiter.ApplicationIntegrationTest
+[INFO] Tests run: 20, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.384 s -- in com.example.ratelimiter.RedisAtomicTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.017 s -- in com.example.ratelimiter.TokenBucketTest
+[INFO] Tests run: 35, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+
+Docker build: passed; 13 fast tests passed inside Temurin21 build image
+Helm lint and template: passed
+Compose config --quiet: passed
+Two application containers: 200,200, then shared429; permissive policy did not refill restrictive state
+Signed JWT, issuer, audience, expiry, forged signature and JWKS timeout: tested
+Authenticated Prometheus and health/readiness: passed
+Six-node cluster: see cluster-check.json
+Final Java/Lettuce application against real six-node Cluster: readiness UP, native200/200/429, restrictive policy remains429 after permissive evaluation; java-cluster-smoke.txt
+Verification application and disposable Cluster/Compose services stopped after checks; database/Redis volumes and local environment file retained.

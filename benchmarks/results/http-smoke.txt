@@ -1,0 +1,6 @@
+Native instance 8080: 200
+Native instance 8081: 200
+Permissive endpoint: 200
+Exhausted restrictive bucket, instance 8080: 429
+Exhausted restrictive bucket, instance 8081: 429
+Authenticated metrics: 200

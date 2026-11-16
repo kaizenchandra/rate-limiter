@@ -1,0 +1,17 @@
+replicas: 3
+image: { repository: your-registry/distributed-rate-limiter, tag: "1.0.0", pullPolicy: IfNotPresent }
+existingSecret: limiter-secrets
+config:
+  DATABASE_URL: jdbc:postgresql://postgres:5432/limiter
+  DATABASE_USER: limiter
+  SPRING_DATA_REDIS_CLUSTER_NODES: redis-0:6379,redis-1:6379,redis-2:6379
+  REDIS_TLS: "true"
+  COORDINATION_DOMAIN: region-a
+  JWT_ISSUER: https://identity.example.com
+  JWT_JWK_SET_URI: https://identity.example.com/.well-known/jwks.json
+  JWT_AUDIENCE: rate-limiter
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://otel-collector:4318/v1/traces
+resources:
+  requests: { cpu: "1", memory: 512Mi }
+  limits: { cpu: "2", memory: 1Gi }
+autoscaling: { minReplicas: 3, maxReplicas: 30, targetCPU: 65 }

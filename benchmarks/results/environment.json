@@ -1,0 +1,45 @@
+{
+  "observedDate": "2026-11-13",
+  "hardware": {
+    "model": "Mac15,6",
+    "logicalCPUs": 11,
+    "hostMemoryBytes": 19327352832,
+    "dockerMemoryBytes": 9434791936,
+    "dedicated": false
+  },
+  "versions": {
+    "hostJava": "Oracle 21.0.13.0.3",
+    "containerJava": "Temurin 21.0.13+9",
+    "maven": "3.10.0 host; 3.9.11 image",
+    "springBoot": "3.5.16",
+    "redis": "8.2.11",
+    "postgresql": "17.12",
+    "docker": "29.8.2",
+    "k6": "2.4.0"
+  },
+  "finalImage": "sha256:717831ba6bc9cb9e6eade6548faabba3a215f5c2d768ff9e5fb4b65863c24b56",
+  "imageUser": "10001:10001",
+  "httpWorkload": {
+    "identities": 1,
+    "effectivePolicies": 1,
+    "cost": 1,
+    "catalogDocuments": 2,
+    "capacity": 1000000000,
+    "refillPerSecond": 1000000000,
+    "leasing": false,
+    "warmupSeconds": 5,
+    "sampleSeconds": 10,
+    "tls": false,
+    "appInstances": 2,
+    "loadedAppInstances": 1,
+    "redisTopology": "standalone authority; separate idle six-node fixture",
+    "distributedGenerators": false
+  },
+  "limitations": [
+    "short diagnostic, not sustained capacity",
+    "shared host and Docker VM",
+    "no per-stage engine p99 isolation",
+    "no synchronized CPU/memory/network profiles",
+    "no multi-region or target-scale claim"
+  ]
+}

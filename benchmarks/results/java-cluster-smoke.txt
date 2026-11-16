@@ -1,0 +1,4 @@
+Final Java/Lettuce image connected to actual six-node Redis Cluster.
+Native statuses: 200,200,429
+Permissive endpoint: 200; restrictive endpoint remains429
+Readiness: UP

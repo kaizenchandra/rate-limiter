@@ -1,0 +1,41 @@
+# Internal-address cluster: application/load generators must join this network.
+services:
+  redis-0:
+    image: redis:8.2.11-alpine
+    command: [ "redis-server", "--port", "6379", "--cluster-enabled", "yes", "--cluster-config-file", "nodes.conf", "--cluster-node-timeout", "5000", "--appendonly", "yes", "--maxmemory-policy", "noeviction" ]
+    networks: [ cluster ]
+
+  redis-1:
+    image: redis:8.2.11-alpine
+    command: [ "redis-server", "--port", "6379", "--cluster-enabled", "yes", "--cluster-config-file", "nodes.conf", "--cluster-node-timeout", "5000", "--appendonly", "yes", "--maxmemory-policy", "noeviction" ]
+    networks: [ cluster ]
+
+  redis-2:
+    image: redis:8.2.11-alpine
+    command: [ "redis-server", "--port", "6379", "--cluster-enabled", "yes", "--cluster-config-file", "nodes.conf", "--cluster-node-timeout", "5000", "--appendonly", "yes", "--maxmemory-policy", "noeviction" ]
+    networks: [ cluster ]
+
+  redis-3:
+    image: redis:8.2.11-alpine
+    command: [ "redis-server", "--port", "6379", "--cluster-enabled", "yes", "--cluster-config-file", "nodes.conf", "--cluster-node-timeout", "5000", "--appendonly", "yes", "--maxmemory-policy", "noeviction" ]
+    networks: [ cluster ]
+
+  redis-4:
+    image: redis:8.2.11-alpine
+    command: [ "redis-server", "--port", "6379", "--cluster-enabled", "yes", "--cluster-config-file", "nodes.conf", "--cluster-node-timeout", "5000", "--appendonly", "yes", "--maxmemory-policy", "noeviction" ]
+    networks: [ cluster ]
+
+  redis-5:
+    image: redis:8.2.11-alpine
+    command: [ "redis-server", "--port", "6379", "--cluster-enabled", "yes", "--cluster-config-file", "nodes.conf", "--cluster-node-timeout", "5000", "--appendonly", "yes", "--maxmemory-policy", "noeviction" ]
+    networks: [ cluster ]
+
+  init:
+    image: redis:8.2.11-alpine
+    entrypoint: [ "sh", "-c" ]
+    command: [ "sleep 5; redis-cli --cluster create redis-0:6379 redis-1:6379 redis-2:6379 redis-3:6379 redis-4:6379 redis-5:6379 --cluster-replicas 1 --cluster-yes" ]
+    depends_on: [ redis-0,redis-1,redis-2,redis-3,redis-4,redis-5 ]
+    networks: [ cluster ]
+networks:
+  cluster:
+    name: limiter-cluster

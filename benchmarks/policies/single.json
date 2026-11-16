@@ -1,0 +1,14 @@
+{
+  "id": "benchmark",
+  "ruleName": "user",
+  "dimension": "USER",
+  "tenant": "demo",
+  "tier": "*",
+  "endpoint": "/benchmark",
+  "capacity": 1000000000,
+  "refillPerSecond": 1000000000,
+  "failureMode": "CLOSED",
+  "lease": false,
+  "enabled": true,
+  "version": 0
+}

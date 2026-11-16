@@ -1,0 +1,8 @@
+{
+  "sameSlotAtomicScript": "passed",
+  "crossSlotRejected": "passed",
+  "controlledCaughtUpReplicaPromotion": "passed",
+  "abruptRollbackBound": "not tested",
+  "slot": 16019,
+  "redisVersion": "8.2.11"
+}
